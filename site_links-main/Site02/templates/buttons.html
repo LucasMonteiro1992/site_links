@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Página com Botões</title>
+    <script>
+        let adOpened = false;
+
+        function openAd(url) {
+            window.open(url, "_blank");
+            adOpened = true;
+            setTimeout(() => {
+                if (adOpened) {
+                    document.getElementById("targetButton").disabled = false;
+                }
+            }, 3000);
+        }
+    </script>
+</head>
+<body>
+    <h1>Escolha uma ação:</h1>
+    <button onclick="openAd('{{ ad_url }}')">Abrir Anúncio</button><br><br>
+    <button id="targetButton" onclick="location.href='{{ target_url }}'" disabled>Ir para o Destino</button>
+</body>
+</html>

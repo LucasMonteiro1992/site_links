@@ -1,55 +1,68 @@
-from flask import Flask, request, render_template_string, redirect, url_for
+import flet as ft
+import time
 
-app = Flask(__name__)
+def main(page: ft.Page):
+    page.title = "Gerador de Botões"
+    page.vertical_alignment = ft.MainAxisAlignment.CENTER
 
-# Rota principal para receber as URLs e gerar a URL personalizada
-@app.route("/", methods=["GET", "POST"])
-def home():
-    if request.method == "POST":
-        url1 = request.form.get("url1")
-        url2 = request.form.get("url2")
-        if url1 and url2:
-            return redirect(url_for("button_page", ad_url=url1, target_url=url2))
-    return '''
-    <form method="post">
-        URL do anúncio: <input type="text" name="url1"><br>
-        URL de destino: <input type="text" name="url2"><br>
-        <input type="submit" value="Gerar URL">
-    </form>
-    '''
+    url1_input = ft.TextField(label="URL do Anúncio", width=400)
+    url2_input = ft.TextField(label="URL do Destino", width=400)
+    result_url = ft.Text(value="", color="blue", selectable=True)
 
-# Rota para exibir a página com os botões
-@app.route("/buttons")
-def button_page():
-    ad_url = request.args.get("ad_url")
-    target_url = request.args.get("target_url")
-    html_template = '''
-    <!DOCTYPE html>
-    <html>
-    <head>
-        <title>Página com Botões</title>
-        <script>
-            let adOpened = false;
+    def generate_url(e):
+        if url1_input.value and url2_input.value:
+            result_url.value = "Clique no link gerado abaixo para testar!"
+            result_url.update()
 
-            function openAd(url) {
-                window.open(url, "_blank");
-                adOpened = true;
-                setTimeout(() => {
-                    if (adOpened) {
-                        document.getElementById("targetButton").disabled = false;
-                    }
-                }, 3000);
-            }
-        </script>
-    </head>
-    <body>
-        <h1>Escolha uma ação:</h1>
-        <button onclick="openAd('{{ ad_url }}')">Abrir Anúncio</button><br><br>
-        <button id="targetButton" onclick="location.href='{{ target_url }}'" disabled>Ir para o Destino</button>
-    </body>
-    </html>
-    '''
-    return render_template_string(html_template, ad_url=ad_url, target_url=target_url)
+            # Função para carregar a nova tela
+            def load_button_screen(e):
+                # Função para ativar o botão final
+                def activate_final_button(e):
+                    final_button.disabled = False
+                    final_button.update()
 
-if __name__ == "__main__":
-    app.run(debug=True)
+                # Função do botão de anúncio
+                def open_advertisement(e):
+                    page.launch_url(url1_input.value)
+                    time.sleep(3)  # Espera de 3 segundos
+                    activate_final_button(e)
+
+                # Tela de botões
+                final_button = ft.ElevatedButton(
+                    "Ir para o destino",
+                    disabled=True,
+                    on_click=lambda _: page.launch_url(url2_input.value),
+                )
+
+                advertisement_button = ft.ElevatedButton(
+                    "Clique para abrir o anúncio",
+                    on_click=open_advertisement,
+                )
+
+                page.clean()
+                page.add(
+                    ft.Text("Clique no anúncio primeiro para desbloquear o destino:"),
+                    advertisement_button,
+                    final_button,
+                )
+
+            page.clean()
+            load_button_screen(e)
+
+    generate_button = ft.ElevatedButton(
+        "Gerar URL",
+        on_click=generate_url,
+    )
+
+    # Tela inicial
+    page.add(
+        ft.Text("Insira as URLs para criar os botões:", size=20),
+        url1_input,
+        url2_input,
+        generate_button,
+        result_url,
+    )
+
+
+# Executar a aplicação Flet
+ft.app(target=main)

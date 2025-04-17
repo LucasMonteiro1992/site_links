@@ -1,68 +1,105 @@
 import flet as ft
-import time
+from flet import Image, Text, Column, Container, TextField, ElevatedButton, icons, Row
+import asyncio
 
 def main(page: ft.Page):
-    page.title = "Gerador de Botões"
-    page.vertical_alignment = ft.MainAxisAlignment.CENTER
+    page.title = "Cloudwalk Payments"
+    page.window_icon = "logo.png"
+    page.theme_mode = ft.ThemeMode.LIGHT
+    page.padding = 20
+    page.scroll = ft.ScrollMode.AUTO
 
-    url1_input = ft.TextField(label="URL do Anúncio", width=400)
-    url2_input = ft.TextField(label="URL do Destino", width=400)
-    result_url = ft.Text(value="", color="blue", selectable=True)
+    # Arquivos locais
+    logo_path = "logo.png"
+    qr_code_path = "qrcode.png"
 
-    def generate_url(e):
-        if url1_input.value and url2_input.value:
-            result_url.value = "Clique no link gerado abaixo para testar!"
-            result_url.update()
+    # Informações do pagamento
+    valor = "R$ 9,90"
+    codigo_pix = """00020101021126580014BR.GOV.BCB.PIX01360c2884fc-0fd2-4e7d-b93b-73a95a2277ab52040000530398654049.905802BR5916Giordana Barreto6008SAOPAULO61080132305062070503***63047DE6"""
 
-            # Função para carregar a nova tela
-            def load_button_screen(e):
-                # Função para ativar o botão final
-                def activate_final_button(e):
-                    final_button.disabled = False
-                    final_button.update()
-
-                # Função do botão de anúncio
-                def open_advertisement(e):
-                    page.launch_url(url1_input.value)
-                    time.sleep(3)  # Espera de 3 segundos
-                    activate_final_button(e)
-
-                # Tela de botões
-                final_button = ft.ElevatedButton(
-                    "Ir para o destino",
-                    disabled=True,
-                    on_click=lambda _: page.launch_url(url2_input.value),
-                )
-
-                advertisement_button = ft.ElevatedButton(
-                    "Clique para abrir o anúncio",
-                    on_click=open_advertisement,
-                )
-
-                page.clean()
-                page.add(
-                    ft.Text("Clique no anúncio primeiro para desbloquear o destino:"),
-                    advertisement_button,
-                    final_button,
-                )
-
-            page.clean()
-            load_button_screen(e)
-
-    generate_button = ft.ElevatedButton(
-        "Gerar URL",
-        on_click=generate_url,
+    # Cabeçalho com logo e texto
+    logo_header = Row(
+        controls=[
+            Image(src=logo_path, width=40, height=40, fit=ft.ImageFit.CONTAIN),
+            Text("Cloudwalk Payments", size=22, weight="bold"),
+        ],
+        alignment=ft.MainAxisAlignment.CENTER,
+        spacing=10
     )
 
-    # Tela inicial
+    # Componentes visuais
+    valor_texto = Text(valor, size=30, weight="bold", color="green600")
+    qr_code = Image(src=qr_code_path, width=250, height=250, fit=ft.ImageFit.CONTAIN)
+    nome_texto = Text("Giordana Barreto", size=16, weight="w500")
+
+    codigo_field = TextField(
+        value=codigo_pix,
+        read_only=True,
+        multiline=True,
+        max_lines=3,
+        expand=True,
+        border=ft.InputBorder.OUTLINE,
+    )
+
+    # Cronômetro (inicialmente invisível)
+    tempo_restante = 180
+    cronometro_text = Text("Código expira em 03:00", size=14, color="red600", visible=False)
+
+    async def atualizar_cronometro():
+        nonlocal tempo_restante
+        cronometro_text.visible = True
+        await page.update_async()
+        while tempo_restante > 0:
+            await asyncio.sleep(1)
+            tempo_restante -= 1
+            minutos = tempo_restante // 60
+            segundos = tempo_restante % 60
+            cronometro_text.value = f"Código expira em {minutos:02d}:{segundos:02d}"
+            await page.update_async()
+        cronometro_text.value = "⚠️ Código expirado"
+        cronometro_text.color = "red"
+        await page.update_async()
+
+    def copiar_codigo(e):
+        page.set_clipboard(codigo_pix)
+        page.snack_bar = ft.SnackBar(content=Text("✅ Código Pix copiado com sucesso!"))
+        page.snack_bar.open = True
+        page.update()
+        page.run_task(atualizar_cronometro)
+
+    copiar_botao = ElevatedButton(
+        text="Copiar código Pix",
+        icon=icons.CONTENT_COPY,
+        on_click=copiar_codigo,
+        style=ft.ButtonStyle(padding=20)
+    )
+
+    def vip_bloqueado(e):
+        page.snack_bar = ft.SnackBar(content=Text("⚠️ Pagamento ainda não foi efetuado."))
+        page.snack_bar.open = True
+        page.update()
+
+    vip_botao = ElevatedButton(
+        text="Conteúdo VIP",
+        icon=icons.LOCK,
+        on_click=vip_bloqueado,
+        style=ft.ButtonStyle(padding=20),
+    )
+
+    # Interface
     page.add(
-        ft.Text("Insira as URLs para criar os botões:", size=20),
-        url1_input,
-        url2_input,
-        generate_button,
-        result_url,
+        Column([
+            Container(logo_header, alignment=ft.alignment.center),
+            Container(valor_texto, alignment=ft.alignment.center),
+            Container(qr_code, alignment=ft.alignment.center),
+            Container(nome_texto, alignment=ft.alignment.center),  # <- Nome adicionado aqui
+            Container(codigo_field, alignment=ft.alignment.center),
+            Container(copiar_botao, alignment=ft.alignment.center),
+            Container(vip_botao, alignment=ft.alignment.center),
+            Container(cronometro_text, alignment=ft.alignment.center),
+        ],
+        horizontal_alignment=ft.CrossAxisAlignment.CENTER,
+        spacing=20)
     )
 
-
-# Executar a aplicação Flet
 ft.app(target=main)
